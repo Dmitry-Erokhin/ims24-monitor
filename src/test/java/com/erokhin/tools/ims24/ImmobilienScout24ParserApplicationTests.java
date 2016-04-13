@@ -7,7 +7,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = ImmobilienScout24ParserApplication.class)
+@SpringApplicationConfiguration(classes = IMS24.class)
 @WebAppConfiguration
 public class ImmobilienScout24ParserApplicationTests {
 

@@ -1,8 +1,8 @@
 package com.erokhin.tools.ims24;
 
-import com.erokhin.tools.ims24.appartement.Apartement;
-import com.erokhin.tools.ims24.appartement.ApartementPageParser;
-import com.erokhin.tools.ims24.appartement.ApartementsRepo;
+import com.erokhin.tools.ims24.appartement.Apartment;
+import com.erokhin.tools.ims24.appartement.ApartmentPageParser;
+import com.erokhin.tools.ims24.appartement.ApartmentsRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,29 +11,26 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Optional;
 
 @SpringBootApplication
-public class ImmobilienScout24ParserApplication implements CommandLineRunner {
-    private static Logger log = LoggerFactory.getLogger(ImmobilienScout24ParserApplication.class);
+public class IMS24 implements CommandLineRunner {
+    private static Logger log = LoggerFactory.getLogger(IMS24.class);
 
     @Autowired
     private ResultPageParser resultPageParser;
 
     @Autowired
-    private ApartementPageParser apartementPageParser;
+    private ApartmentPageParser apartmentPageParser;
 
     @Autowired
-    private ApartementsRepo apartementsRepo;
+    private ApartmentsRepo apartmentsRepo;
 
 
     public static void main(String[] args) throws IOException {
-//        String s = " Scout-ID: 87655203 ";
-//        Pattern p = Pattern.compile("^ Scout-ID: \\d+ $");
-//        Matcher m = p.matcher(s);
-//        System.out.println(m.find());
-//        System.out.println(m.group());
-        SpringApplication.run(ImmobilienScout24ParserApplication.class, args);
+        SpringApplication.run(IMS24.class, args);
     }
 
     @Override
@@ -41,14 +38,16 @@ public class ImmobilienScout24ParserApplication implements CommandLineRunner {
 //        String url = "https://www.immobilienscout24.de/Suche/S-T/WAZ/Berlin/Berlin/Tiergarten-Tiergarten_Grunewald-Wilmersdorf_Prenzlauer-Berg-Prenzlauer-Berg_Friedrichshain-Friedrichshain_Kreuzberg-Kreuzberg_Schoeneberg-Schoeneberg_Wilmersdorf-Wilmersdorf_Mitte-Mitte_Charlottenburg-Charlottenburg/EURO-800,00-1300,00/-/-/true/-/-/-/-/-/-/-/3,00-?enteredFrom=saved_search";
 //        Collection<String> links = resultPageParser.parse(url);
 //        Files.write(Paths.get("./links.txt"), links);
+
+
+
 ////
-        Optional<Apartement> a = apartementPageParser.parse("/expose/87655203");
+        Files.lines(Paths.get("./doc/links.txt"))
+                .limit(5)
+                .map(apartmentPageParser::parse)
+                .forEach(a -> a.ifPresent(apartmentsRepo::save));
 
-        if (a.isPresent()) {
-            apartementsRepo.save(a.get());
-        }
-
-        System.out.println(apartementsRepo.findAll());
+        System.out.println(apartmentsRepo.findAll());
 
     }
 }

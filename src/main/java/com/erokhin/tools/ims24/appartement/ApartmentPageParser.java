@@ -16,13 +16,15 @@ import java.util.Optional;
 import java.util.Scanner;
 import java.util.function.Function;
 
+import static com.erokhin.tools.ims24.appartement.Apartment.Conclusion.*;
+
 /**
  * Created by Dmitry Erokhin (dmitry.erokhin@gmail.com)
  * 10/04/16
  */
 @Component
-public class ApartementPageParser {
-    private static Logger log = LoggerFactory.getLogger(ApartementPageParser.class);
+public class ApartmentPageParser {
+    private static Logger log = LoggerFactory.getLogger(ApartmentPageParser.class);
 
     @Value("${fetch.delay:1000}")
     private int queryDelay;
@@ -30,24 +32,24 @@ public class ApartementPageParser {
     @Value("${fetch.base-url}")
     private String baseUrl;
 
-    public ApartementPageParser() {
+    public ApartmentPageParser() {
     }
 
-    public Optional<Apartement> parse(String url) {
-        Apartement apartement = new Apartement();
+    public Optional<Apartment> parse(String url) {
+        Apartment apartment = new Apartment();
 
         Optional<String> id = Arrays.stream(url.split("/"))
                 .filter(e -> e.matches("\\d+"))
                 .findAny();
 
         if (id.isPresent()) {
-            apartement.id = id.get();
+            apartment.setId(Long.parseLong(id.get()));
         } else {
             log.warn("Can not process url {}", url);
             return Optional.empty();
         }
 
-        apartement.url = baseUrl + url;
+        apartment.setUrl(baseUrl + url);
 
         log.debug("Requesting url: {}", baseUrl + url);
 
@@ -59,23 +61,24 @@ public class ApartementPageParser {
             return Optional.empty();
         }
 
-        apartement.vacantFrom = parseVacantFrom(doc);
-        apartement.minMonthsRental = parseMinMonthsRental(doc);
-        apartement.maxMonthsRental = parseMaxMonthsRental(doc);
+        apartment.setVacantFrom(parseVacantFrom(doc));
+        apartment.setMinMonthsRental(parseMinMonthsRental(doc));
+        apartment.setMaxMonthsRental(parseMaxMonthsRental(doc));
         Double rooms = parseRooms(doc);
-        apartement.rooms = rooms == null ? null : rooms.intValue();
-        apartement.hasHalfroom = rooms != null && rooms > apartement.rooms;
-        apartement.livingSpace = parseLivingSpace(doc);
-        apartement.maxCapacity = parseMaxCapacity(doc);
-        apartement.floor = parseFloor(doc);
-        apartement.petsProhibited = parsePetsProhibited(doc);
-        apartement.finalRentCost = parseFinalRentCost(doc);
-        apartement.deposit = parseDeposit(doc);
-        apartement.location = parseLocation(doc);
-        apartement.additionalInfo = parseInfo(doc);
+        apartment.setRooms(rooms);
+        apartment.setLivingSpace(parseLivingSpace(doc));
+        apartment.setMaxCapacity(parseMaxCapacity(doc));
+        apartment.setFloor(parseFloor(doc));
+        apartment.setPetsProhibited(parsePetsProhibited(doc));
+        apartment.setFinalRentCost(parseFinalRentCost(doc));
+        apartment.setDeposit(parseDeposit(doc));
+        apartment.setLocation(parseLocation(doc));
+        apartment.setConclusion(
+                apartment.isPetsProhibited() ? NO : MAYBE
+        );
 
-        log.debug("Parsed {}", apartement);
-        return Optional.of(apartement);
+        log.debug("Parsed {}", apartment);
+        return Optional.of(apartment);
     }
 
     private LocalDate parseVacantFrom(Document doc) {
@@ -121,7 +124,7 @@ public class ApartementPageParser {
     private Integer parseLivingSpace(Document doc) {
         return parse(
                 doc,
-                "Rooms amount",
+                "LivingSpace",
                 d -> d.getElementsByClass("is24qa-wohnflaeche-ca").first(),
                 e -> new Scanner(e.text()).nextInt(),
                 null
@@ -136,7 +139,7 @@ public class ApartementPageParser {
     private String parseFloor(Document doc) {
         return parse(
                 doc,
-                "Rooms amount",
+                "Floor",
                 d -> d.getElementsByClass("is24qa-etage").first(),
                 e -> e.text().trim(),
                 null
@@ -146,10 +149,10 @@ public class ApartementPageParser {
     private boolean parsePetsProhibited(Document doc) { //is24qa-haustiere
         return parse(
                 doc,
-                "Rooms amount",
+                "Pets allowance",
                 d -> d.getElementsByClass("is24qa-haustiere").first(),
                 e -> "Nein".equalsIgnoreCase(e.text().trim()),
-                null
+                false
         );
     }
 
@@ -158,12 +161,12 @@ public class ApartementPageParser {
                 doc,
                 "Final cost",
                 d -> d.getElementsByClass("is24qa-pauschalmiete").first(),
-                e -> new Scanner(e.text()).nextInt(),
+                e -> Integer.valueOf(e.text().replaceAll("[^\\d+]", "")),
                 null
         );
     }
 
-    private int parseDeposit(Document doc) { //is24qa-kaution
+    private Integer parseDeposit(Document doc) { //is24qa-kaution
         return parse(
                 doc,
                 "Deposit",
@@ -183,16 +186,6 @@ public class ApartementPageParser {
 //                null
 //        );
         return null;
-    }
-
-    private String parseInfo(Document doc) {
-        return parse(
-                doc,
-                "Deposit",
-                d -> d.getElementsByClass("is24qa-objektbeschreibung").first(),
-                e -> e.text().trim(),
-                null
-        );
     }
 
     private <T> T parse(Document doc,
